@@ -9,9 +9,11 @@
 
 #include "nngridder.h"
 #include <cmath>
+#include <lmdb.h>
+#include <caffe/proto/caffe.pb.h>
 
 using namespace boost;
-
+using namespace caffe;
 
 //return the occupancy for atom a at point x,y,z
 float NNGridder::calcPoint(const atom& a, const vec& pt)
@@ -346,3 +348,80 @@ void NNGridder::outputBIN(ostream& out, bool outputrec, bool outputlig)
 	}
 }
 
+void NNGridder::outputLMDB(const string& path, bool outputrec, bool outputlig)
+{
+	MDB_env *env;
+	MDB_txn *txn;
+	MDB_dbi dbi;
+	MDB_val key, value;
+
+	mdb_env_create(&env);
+	mdb_env_set_mapsize(env, 1099511627776); // 1 TB
+	mdb_env_open(env, path.c_str(), 0, 0664);
+	mdb_txn_begin(env, NULL, 0, &txn);
+	mdb_dbi_open(txn, NULL, 0, &dbi);
+
+	unsigned n = dims[0].n + 1; // cubic grid size
+	unsigned c = 0; // number of channels
+
+	if (outputrec)
+		c += receptorGrids.size();
+	if (outputlig)
+		c += ligandGrids.size();
+
+	// get grid data into a Caffe Datum
+	Datum *datum = new Datum();
+	datum->mutable_shape()->add_dim(c);
+	datum->mutable_shape()->add_dim(n);
+	datum->mutable_shape()->add_dim(n);
+	datum->mutable_shape()->add_dim(n);
+
+	if (outputrec)
+	{
+		for (unsigned a = 0, na = receptorGrids.size(); a < na; a++)
+		{
+			for (unsigned i = 0; i < n; i++)
+			{
+				for (unsigned j = 0; j < n; j++)
+				{
+					for (unsigned k = 0; k < n; k++)
+					{
+						datum->add_float_data(receptorGrids[a][i][j][k]);
+					}
+				}
+			}
+		}
+	}
+
+	if (outputlig)
+	{
+		for (unsigned a = 0, na = ligandGrids.size(); a < na; a++)
+		{
+			for (unsigned i = 0; i < n; i++)
+			{
+				for (unsigned j = 0; j < n; j++)
+				{
+					for (unsigned k = 0; k < n; k++)
+					{
+						datum->add_float_data(ligandGrids[a][i][j][k]);
+					}
+				}
+			}
+		}
+	}
+
+	string serial_datum;
+	datum->SerializeToString(&serial_datum);
+	delete datum;
+
+	int k = 0;
+	key.mv_size = sizeof(int);
+	key.mv_data = &k;
+
+	value.mv_size = serial_datum.size();
+	value.mv_data = const_cast<char*>(serial_datum.data());
+
+	mdb_put(txn, dbi, &key, &value, 0);
+	mdb_txn_commit(txn);
+	mdb_env_close(env);
+}

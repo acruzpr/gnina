@@ -176,7 +176,7 @@ int main(int argc, char *argv[])
 		string ligandfile = opt.ligandfile;
 		if(opt.centerfile.size() > 0)
 			ligandfile = opt.centerfile;
-		setup_autobox(ligandfile, 0, opt.x,opt.y, opt.z, dummy, dummy, dummy);
+		setup_autobox(ligandfile, 0, opt.x, opt.y, opt.z, dummy, dummy, dummy);
 	}
 
 	//setup atom type mapping

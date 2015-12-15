@@ -1,4 +1,4 @@
-BASE=/usr/local/
+BASE=/usr/local
 C_PLATFORM= 
 GPP=g++
 C_OPTIONS= -O3 -DNDEBUG -g   

@@ -64,6 +64,9 @@ public:
 
 	//output binary form of raw data in 3D multi-channel form (types are last)
 	void outputBIN(ostream& out, bool outputrec = true, bool outputlig = true);
+
+	//output LMDB database of grid data and dimensionality
+	void outputLMDB(const string& path, bool outputrec = true, bool outputlig = true);
 };
 
 #endif
