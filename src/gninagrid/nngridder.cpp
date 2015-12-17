@@ -348,12 +348,14 @@ void NNGridder::outputBIN(ostream& out, bool outputrec, bool outputlig)
 	}
 }
 
-void NNGridder::outputLMDB(const string& path, bool outputrec, bool outputlig)
+//this opens and writes a new LMDB each call. should make it take the
+//LMDB equivalent of an i/o stream or fp, but LMDB does not make that easy
+void NNGridder::outputLMDB(string& path, bool outputrec, bool outputlig)
 {
 	MDB_env *env;
 	MDB_txn *txn;
 	MDB_dbi dbi;
-	MDB_val key, value;
+	int index = 0;
 
 	mdb_env_create(&env);
 	mdb_env_set_mapsize(env, 1099511627776); // 1 TB
@@ -363,7 +365,6 @@ void NNGridder::outputLMDB(const string& path, bool outputrec, bool outputlig)
 
 	unsigned n = dims[0].n + 1; // cubic grid size
 	unsigned c = 0; // number of channels
-
 	if (outputrec)
 		c += receptorGrids.size();
 	if (outputlig)
@@ -414,10 +415,9 @@ void NNGridder::outputLMDB(const string& path, bool outputrec, bool outputlig)
 	datum->SerializeToString(&serial_datum);
 	delete datum;
 
-	int k = 0;
+	MDB_val key, value;
 	key.mv_size = sizeof(int);
-	key.mv_data = &k;
-
+	key.mv_data = &index;
 	value.mv_size = serial_datum.size();
 	value.mv_data = const_cast<char*>(serial_datum.data());
 

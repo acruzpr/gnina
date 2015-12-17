@@ -200,14 +200,7 @@ int main(int argc, char *argv[])
 
 			//want separate ligand/receptor grid files
 			//output receptor only
-			binout.open(outname.c_str());
-			if(!binout)
-			{
-				cerr << "Could not open " << outname << "\n";
-				exit(-1);
-			}
-			gridder.outputBIN(binout, true, false);
-			binout.close();
+			gridder.outputLMDB(outname, true, false);
 
 			parmstr = "." + gridder.getParamString(false,true); //ligand only name
 		}
@@ -236,13 +229,7 @@ int main(int argc, char *argv[])
 		else
 		{
 			string outname = base + parmstr  + ".binmap";
-			ofstream binout(outname.c_str());
-			if(!binout)
-			{
-				cerr << "Could not open " << outname << "\n";
-				exit(-1);
-			}
-			gridder.outputBIN(binout, opt.ligoutname.size() == 0);
+			gridder.outputLMDB(outname, opt.ligoutname.size() == 0);
 		}
 		ligcnt++;
 	}

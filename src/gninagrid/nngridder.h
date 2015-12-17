@@ -9,6 +9,7 @@
 #include <boost/multi_array.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/algorithm/string.hpp>
+#include <lmdb.h>
 
 #include "atom_type.h"
 #include "box.h"
@@ -66,7 +67,7 @@ public:
 	void outputBIN(ostream& out, bool outputrec = true, bool outputlig = true);
 
 	//output LMDB database of grid data and dimensionality
-	void outputLMDB(const string& path, bool outputrec = true, bool outputlig = true);
+	void outputLMDB(string& path, bool outputrec = true, bool outputlig = true);
 };
 
 #endif
