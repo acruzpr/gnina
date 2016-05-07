@@ -235,6 +235,12 @@ void interaction_energy(const GPUNonCacheInfo dinfo,
 	unsigned r = blockDim.x - threadIdx.x - 1;
 	unsigned roffset = remainder ? remainder_offset : blockIdx.y * THREADS_PER_BLOCK;
 	unsigned ridx = roffset + r;
+
+	//recatoms array actually has ligand atoms concatenated at the end to do 
+	//the intramolecular eval here, too, and you don't want to count the
+	//interaction with yourself
+	if (ridx == dinfo.nrec_atoms + l) 
+		return;
 	//get ligand atom info
 	unsigned t = dinfo.types[l];
 	//TODO: remove hydrogen atoms completely
@@ -337,8 +343,8 @@ float single_point_calc(const GPUNonCacheInfo *info,
 	//there is one execution stream for the blocks with
 	//a full complement of threads and a separate stream
 	//for the blocks that have the remaining threads
-	unsigned nfull_blocks = nrec_atoms / THREADS_PER_BLOCK;
-	unsigned nthreads_remain = nrec_atoms % THREADS_PER_BLOCK;
+	unsigned nfull_blocks = (nrec_atoms + nlig_atoms) / THREADS_PER_BLOCK;
+	unsigned nthreads_remain = (nrec_atoms + nlig_atoms) % THREADS_PER_BLOCK;
 
 	if (nfull_blocks)
 		interaction_energy<0>

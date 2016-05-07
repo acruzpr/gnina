@@ -839,6 +839,10 @@ void model::set(const conf& c)
 	flex.set_conf(atoms, coords, c.flex);
 }
 
+void model::set(const conf_gpu& c)
+{
+	ligand_gpu.set_conf(atoms, coords, c.ligands[0]);
+}
 //dkoes - return the string corresponding to i'th ligand atoms pdb information
 //which is serial+name
 std::string model::ligand_atom_str(sz i, sz lig) const
@@ -985,6 +989,18 @@ fl model::eval_deriv(const precalculate& p, const igrid& ig, const vec& v,
 	// calculate derivatives
 	ligands.derivative(coords, minus_forces, g.ligands);
 	flex.derivative(coords, minus_forces, g.flex); // inflex forces are ignored
+	return e;
+}
+
+fl model::eval_deriv(const precalculate& p, const igrid& ig, const vec& v,
+                     const conf_gpu& c, change_gpu& g, const grid& user_grid)
+{ // clean up
+	set(c);
+	fl e = ig.eval_deriv(*this, v[1], user_grid); // sets minus_forces, except inflex
+	e += eval_interacting_pairs_deriv(p, v[2], other_pairs, coords,
+			minus_forces); // adds to minus_forces
+	// calculate derivatives
+	ligands_gpu.derivative(coords, minus_forces, g.ligands[0]);
 	return e;
 }
 
