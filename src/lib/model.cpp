@@ -839,10 +839,14 @@ void model::set(const conf& c)
 	flex.set_conf(atoms, coords, c.flex);
 }
 
-void model::set(const conf_gpu& c)
+void model::set_gpu(const conf& c)
 {
-	ligand_gpu.set_conf(atoms, coords, c.ligands[0]);
+    assert(c.ligands.size() == 1);
+	lgpu.t.set_conf(atoms, coords, c.ligands[0]);
+    /* TODO: flex */
+	flex.set_conf(atoms, coords, c.flex);
 }
+
 //dkoes - return the string corresponding to i'th ligand atoms pdb information
 //which is serial+name
 std::string model::ligand_atom_str(sz i, sz lig) const
@@ -932,6 +936,12 @@ fl model::eval_interacting_pairs_deriv(const precalculate& p, fl v,
 	return e;
 }
 
+fl model::eval_interacting_pairs_deriv_gpu(force_energy_tup* out, 
+						const precalculate& p, const igrid& ig, float v) 
+{
+	return eval_intra_deriv(&lgpu, &coords[0], out, const float p.cutoff_sqr, const &ig.info, float v);
+}
+
 fl model::evali(const precalculate& p, const vec& v) const
 { // clean up
 
@@ -976,31 +986,31 @@ fl model::eval(const precalculate& p, const igrid& ig, const vec& v,
 	return e;
 }
 
-fl model::eval_deriv(const precalculate& p, const igrid& ig, const vec& v,
+fl model::eval_deriv_gpu(const precalculate& p, const igrid& ig, const vec& v,
                      const conf& c, change& g, const grid& user_grid)
 { // clean up
-	set(c);
+	set_gpu(c);
 	fl e = ig.eval_deriv(*this, v[1], user_grid); // sets minus_forces, except inflex
 	e += eval_interacting_pairs_deriv(p, v[2], other_pairs, coords,
 			minus_forces); // adds to minus_forces
-	VINA_FOR_IN(i, ligands)
-		e += eval_interacting_pairs_deriv(p, v[0], ligands[i].pairs, coords,
-				minus_forces); // adds to minus_forces
 	// calculate derivatives
-	ligands.derivative(coords, minus_forces, g.ligands);
+	lgpu.t.derivative(coords, minus_forces, g.ligands[0]);
 	flex.derivative(coords, minus_forces, g.flex); // inflex forces are ignored
 	return e;
 }
 
 fl model::eval_deriv(const precalculate& p, const igrid& ig, const vec& v,
-                     const conf_gpu& c, change_gpu& g, const grid& user_grid)
-{ // clean up
+		const conf& c, change& g, const grid& user_grid)
+{
 	set(c);
-	fl e = ig.eval_deriv(*this, v[1], user_grid); // sets minus_forces, except inflex
+	force_energy_tup* out = ig.eval_deriv(*this, v[1], user_grid); // sets minus_forces, except inflex
 	e += eval_interacting_pairs_deriv(p, v[2], other_pairs, coords,
 			minus_forces); // adds to minus_forces
+	VINA_FOR_IN(i, ligands)
+		e += eval_interacting_pairs_deriv_gpu(out, p, ig, float(v[0])); // adds to minus_forces
 	// calculate derivatives
-	ligands_gpu.derivative(coords, minus_forces, g.ligands[0]);
+	ligands.derivative(coords, minus_forces, g.ligands);
+	flex.derivative(coords, minus_forces, g.flex); // inflex forces are ignored
 	return e;
 }
 
@@ -1268,6 +1278,15 @@ void model::print_stuff() const
 		printnl(a.coords);
 	}
 	about();
+}
+
+void model::print_counts(void) const
+{
+    std::cout
+        << "ligands :" << ligands.size() << "\n"
+        << "torsions: " << ligands.count_torsions()[0] << "\n"
+        << "lig atoms: " << coords.size() << "\n"
+        << "rec atoms(unpruned): " << grid_atoms.size() << "\n";
 }
 
 fl pairwise_clash_penalty(fl r, fl covalent_r)

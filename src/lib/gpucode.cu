@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include "gpu_util.h"
 #include "gpucode.h"
+#include "model.h"
 
 #define THREADS_PER_BLOCK 1024
 #define warpSize 32
@@ -235,12 +236,6 @@ void interaction_energy(const GPUNonCacheInfo dinfo,
 	unsigned r = blockDim.x - threadIdx.x - 1;
 	unsigned roffset = remainder ? remainder_offset : blockIdx.y * THREADS_PER_BLOCK;
 	unsigned ridx = roffset + r;
-
-	//recatoms array actually has ligand atoms concatenated at the end to do 
-	//the intramolecular eval here, too, and you don't want to count the
-	//interaction with yourself
-	if (ridx == dinfo.nrec_atoms + l) 
-		return;
 	//get ligand atom info
 	unsigned t = dinfo.types[l];
 	//TODO: remove hydrogen atoms completely
@@ -329,8 +324,45 @@ global void reduce_energy(force_energy_tup *result) {
     
 /* } */
 
+global void eval_intra_kernel(const ligand_gpu lgpu, atom_params* ligs, 
+						force_energy_tup* out, const float cutoff_sqr,
+						GPUNonCacheInfo info, float v)
+{
+	unsigned i = threadIdx.x;
+	const interacting_pair& ip = lgpu.pairs[i]; 
+	float3 r;
+	r = ligs[ip.b].coords - ligs[ip.a].coords; // a -> b
+	float r2 = dot(r,r);
+	if (r2 < cutoff_sqr)                                                                             
+	{   
+		float energy;
+		float3 deriv = float3(0,0,0);
+		float dor;
+		unsigned t1 = ip.t1;
+		unsigned t2 = ip.t2;
+		energy = eval_deriv_gpu(info, t1, ligs[ip.a].charge, t2,
+				ligs[ip.b].charge, r2, dor);		
+		deriv = r * dor;
+
+		atomicAdd(&out[ip.b].minus_force.x, deriv.x);
+		atomicAdd(&out[ip.b].minus_force.y, deriv.y);
+		atomicAdd(&out[ip.b].minus_force.z, deriv.z);
+
+		atomicAdd(&out[ip.a].minus_force.x, -deriv.x);
+		atomicAdd(&out[ip.a].minus_force.y, -deriv.y);
+		atomicAdd(&out[ip.a].minus_force.z, -deriv.z);
+
+		float this_e = block_sum<float>(energy);
+		if (threadIdx.x == 0)
+		{
+			curl(this_e, (float *) &deriv, v);
+			out[0].energy += this_e;
+		}
+	}
+}
+
 //host side of single point_calculation, energies and coords should already be initialized
-float single_point_calc(const GPUNonCacheInfo *info,
+force_energy_tup* single_point_calc(const GPUNonCacheInfo *info,
                         atom_params *ligs,
                         force_energy_tup *out,
                         float slope, unsigned nlig_atoms,
@@ -343,8 +375,8 @@ float single_point_calc(const GPUNonCacheInfo *info,
 	//there is one execution stream for the blocks with
 	//a full complement of threads and a separate stream
 	//for the blocks that have the remaining threads
-	unsigned nfull_blocks = (nrec_atoms + nlig_atoms) / THREADS_PER_BLOCK;
-	unsigned nthreads_remain = (nrec_atoms + nlig_atoms) % THREADS_PER_BLOCK;
+	unsigned nfull_blocks = nrec_atoms / THREADS_PER_BLOCK;
+	unsigned nthreads_remain = nrec_atoms % THREADS_PER_BLOCK;
 
 	if (nfull_blocks)
 		interaction_energy<0>
@@ -361,5 +393,16 @@ float single_point_calc(const GPUNonCacheInfo *info,
 	/* cudaStreamSynchronize(0); */
     abort_on_gpu_err();
     
-	return out[0].energy;
+	return out;
+}
+
+float eval_intra_deriv(const ligand_gpu* lgpu, atom_params* ligs, 
+					force_energy_tup* out, const float cutoff_sqr,
+					GPUNonCacheInfo *info, float v)
+{
+	eval_intra_kernel<<<1,lgpu->num_pairs>>>(*lgpu, ligs, out, cutoff_sqr, *info, v);
+	cudaThreadSynchronize();
+	abort_on_gpu_err();
+
+	return out[0].energy;	
 }

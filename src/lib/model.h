@@ -29,6 +29,7 @@
 #include <string>
 #include "file.h"
 #include "tree.h"
+#include "tree_gpu.h"
 #include "matrix.h"
 #include "precalculate.h"
 #include "igrid.h"
@@ -184,6 +185,19 @@ struct ligand : public flexible_body, atom_range {
 	}
 };
 
+
+struct ligand_gpu {
+	unsigned degrees_of_freedom;
+	interacting_pairs pairs;
+	unsigned num_pairs;
+	context cont;
+	tree_gpu t;
+	ligand_gpu() : degrees_of_freedom(0), num_pairs(0) {}
+	ligand_gpu(ligand& l) : degrees_of_freedom(l.degrees_of_freedom),
+                            pairs(l.pairs), num_pairs(l.pairs.size()), 
+							cont(l.cont), t(l) {}
+};
+
 struct residue : public main_branch {
 	residue() {} //serialization
 	residue(const main_branch& m) : main_branch(m) {}
@@ -271,6 +285,7 @@ struct model {
 	void seti(const conf& c);
 	void sete(const conf& c);
 	void set (const conf& c);
+    void set_gpu(const conf& c);
 
 	std::string ligand_atom_str(sz i, sz lig=0) const;
 	fl gyration_radius(sz ligand_number) const; // uses coords
@@ -297,6 +312,8 @@ struct model {
 	fl eval      (const precalculate& p, const igrid& ig, const vec& v,
                 const conf& c, const grid& user_grid	);
 	fl eval_deriv(const precalculate& p, const igrid& ig, const vec& v,
+                const conf& c, change& g, const grid& user_grid);
+	fl eval_deriv_gpu(const precalculate& p, const igrid& ig, const vec& v,
                 const conf& c, change& g, const grid& user_grid);
 	fl eval_flex(const precalculate& p, const vec& v,
                const conf& c, unsigned maxGridAtom=0);
@@ -350,6 +367,8 @@ struct model {
 	}
 	void check_internal_pairs() const;
 	void print_stuff() const; // FIXME rm
+    /* TODO: rm */
+    void print_counts(void) const;
 
 	fl clash_penalty() const;
 
@@ -357,8 +376,11 @@ struct model {
 	const atomv& get_movable_atoms() const { return atoms; }
 
 	model() : m_num_movable_atoms(0) {};
-    /* TODO:remove */
+    /* TODO:protect */
 	gvecv coords;
+    ligand_gpu lgpu;
+    vector_mutable<ligand> ligands;
+
 private:
 	//my, aren't we friendly!
 	friend struct non_cache;
@@ -425,7 +447,6 @@ private:
 	atomv grid_atoms;
 	atomv atoms; // movable, inflex
 
-	vector_mutable<ligand> ligands;
 	vector_mutable<residue> flex;
 	context flex_context;
   // all except internal to one ligand: ligand-other ligands;
