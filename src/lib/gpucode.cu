@@ -361,7 +361,7 @@ float single_point_calc(const GPUNonCacheInfo *info,
 
 global
 void eval_intra_kernel(atom_params* ligs, force_energy_tup* forces,
-                       atom_params *pairs, const float cutoff_sqr,
+                       interacting_pair *pairs, const float cutoff_sqr,
                        GPUNonCacheInfo info, float v)
 {
 	unsigned i = threadIdx.x;

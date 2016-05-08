@@ -39,6 +39,9 @@ public:
 	//evaluate the model on the gpu, v is the curl amount
 	//sets m.minus_forces and returns total energy
 	virtual fl eval_deriv(model& m, fl v, const grid& user_grid) const;
+
+    fl eval_intra_deriv(const ligand_gpu& lgpu, fl v, atom_params* ligs,
+                        gvecv &forces, const float cutoff_sqr);
 };
 
 #endif
