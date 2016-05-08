@@ -4,12 +4,16 @@ GPP=g++
 C_OPTIONS= -O3 -g   
 BOOST_LIB_VERSION=
 NVCC=nvcc
-NVOPTS=-O3 -g -G -lineinfo
+NVOPTS=-std=c++11 -gencode arch=compute_52,code=sm_52 -O3 -G -g -lineinfo
 OPENBABEL_INCLUDE=/usr/include/openbabel-2.0
+GPUOBJ = gpucode.o
 
 include ../../makefile_common
 
 .DEFAULT_GOAL := gpu
 
-gpu: $(MAINOBJ) $(LIBOBJ)
-	$(NVCC) $(NVOPTS) -gencode arch=compute_52,code=sm_52 $(LDFLAGS) -o smina.$@ $^ $(LIBS)  -lcudart
+%.o : ../../../src/lib/%.cu 
+	$(NVCC) $(NVOPTS) -DSMINA_GPU -o $@ -dc $<
+
+gpu: $(MAINOBJ) $(LIBOBJ) $(GPUOBJ)
+	$(NVCC) -gencode arch=compute_52,code=sm_52 $(LDFLAGS) -o smina.$@ $^ $(LIBS)  -lcudart
