@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include "gpu_util.h"
 #include "gpucode.h"
+#include "model.h"
 
 #define THREADS_PER_BLOCK 1024
 #define warpSize 32
@@ -356,4 +357,41 @@ float single_point_calc(const GPUNonCacheInfo *info,
     abort_on_gpu_err();
     
 	return out[0].energy;
+}
+
+global
+void eval_intra_kernel(atom_params* ligs, force_energy_tup* forces,
+                       atom_params *pairs, const float cutoff_sqr,
+                       GPUNonCacheInfo info, float v)
+{
+	unsigned i = threadIdx.x;
+	const interacting_pair& ip = pairs[i]; 
+	float3 r = ligs[ip.b].coords - ligs[ip.a].coords; // a -> b
+	float r2 = dot(r,r);
+	if (r2 < cutoff_sqr)
+	{   
+		float energy;
+		float3 deriv = float3(0,0,0);
+		float dor;
+		unsigned t1 = ip.t1;
+		unsigned t2 = ip.t2;
+		energy = eval_deriv_gpu(info, t1, ligs[ip.a].charge, t2,
+                                ligs[ip.b].charge, r2, dor);		
+		deriv = r * dor;
+
+		atomicAdd(&forces[ip.b].minus_force.x, deriv.x);
+		atomicAdd(&forces[ip.b].minus_force.y, deriv.y);
+		atomicAdd(&forces[ip.b].minus_force.z, deriv.z);
+
+		atomicAdd(&forces[ip.a].minus_force.x, -deriv.x);
+		atomicAdd(&forces[ip.a].minus_force.y, -deriv.y);
+		atomicAdd(&forces[ip.a].minus_force.z, -deriv.z);
+
+		float this_e = block_sum<float>(energy);
+		if (threadIdx.x == 0)
+		{
+			curl(this_e, (float *) &deriv, v);
+			forces[0].energy += this_e;
+		}
+	}
 }

@@ -55,7 +55,7 @@ struct interacting_pair {
 	}
 };
 
-typedef std::vector<interacting_pair> interacting_pairs;
+typedef gvector<interacting_pair> interacting_pairs;
 
 typedef std::pair<std::string, boost::optional<sz> > parsed_line;
 typedef std::vector<parsed_line> pdbqtcontext;

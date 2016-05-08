@@ -117,3 +117,25 @@ fl non_cache_gpu::eval_deriv(model& m, fl v, const grid& user_grid) const
   t.stop();
   return e;
 }
+
+__global__
+void eval_intra_kernel(atom_params* ligs, force_energy_tup* forces,
+                       atom_params *pairs, const float cutoff_sqr,
+                       GPUNonCacheInfo info, float v);
+
+/* TODO: move to precalculate */
+fl non_cache_gpu::eval_intra_deriv(const ligand_gpu& lgpu, fl v, atom_params* ligs,
+                                   gvecv &forces, const float cutoff_sqr)
+{
+    eval_intra_kernel<<<1,lgpu.pairs.size()>>>(ligs,
+                                               (force_energy_tup *) &forces[0],
+                                               (atom_params *) &lgpu.pairs[0],
+                                               cutoff_sqr, *dinfo, v);
+    cudaThreadSynchronize();
+    abort_on_gpu_err();
+    /* TODO: fetch energy differently */
+    return forces[0].energy;
+    
+fl non_cache_gpu::eval_intraligand_deriv_gpu(
+    
+    
