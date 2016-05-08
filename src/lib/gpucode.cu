@@ -395,14 +395,3 @@ force_energy_tup* single_point_calc(const GPUNonCacheInfo *info,
     
 	return out;
 }
-
-float eval_intra_deriv(const ligand_gpu* lgpu, atom_params* ligs, 
-					force_energy_tup* out, const float cutoff_sqr,
-					GPUNonCacheInfo *info, float v)
-{
-	eval_intra_kernel<<<1,lgpu->num_pairs>>>(*lgpu, ligs, out, cutoff_sqr, *info, v);
-	cudaThreadSynchronize();
-	abort_on_gpu_err();
-
-	return out[0].energy;	
-}

@@ -9,6 +9,8 @@
 #include <cuda_runtime.h>
 #include <vector>
 #include "gpu_math.h"
+#include "tree_gpu.h"
+#include "model.h"
 
 struct GPUSplineInfo
 {
@@ -68,4 +70,7 @@ force_energy_tup* single_point_calc(const GPUNonCacheInfo *dinfo, atom_params *l
                         unsigned nlig_atoms, unsigned nrec_atoms, float v);
 
 
+void eval_intra_kernel(const ligand_gpu lgpu, atom_params* ligs, 
+						force_energy_tup* out, const float cutoff_sqr,
+						GPUNonCacheInfo info, float v);
 #endif

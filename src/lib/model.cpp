@@ -21,6 +21,7 @@
  */
 
 #include "model.h"
+#include "gpucode.h"
 #include "file.h"
 #include "curl.h"
 #include <boost/unordered_map.hpp>
@@ -1003,11 +1004,12 @@ fl model::eval_deriv(const precalculate& p, const igrid& ig, const vec& v,
 		const conf& c, change& g, const grid& user_grid)
 {
 	set(c);
-	force_energy_tup* out = ig.eval_deriv(*this, v[1], user_grid); // sets minus_forces, except inflex
-	e += eval_interacting_pairs_deriv(p, v[2], other_pairs, coords,
+	force_energy_tup* = ig.eval_deriv(*this, v[1], user_grid); // sets minus_forces, except inflex
+	fl e = eval_interacting_pairs_deriv(p, v[2], other_pairs, coords,
 			minus_forces); // adds to minus_forces
 	VINA_FOR_IN(i, ligands)
-		e += eval_interacting_pairs_deriv_gpu(out, p, ig, float(v[0])); // adds to minus_forces
+		e += ig.eval_intra_deriv(&lgpu, &coords[0], out, p.cutoff_sqr, 
+				const &ig.info, float(v[0])); // adds to minus_forces
 	// calculate derivatives
 	ligands.derivative(coords, minus_forces, g.ligands);
 	flex.derivative(coords, minus_forces, g.flex); // inflex forces are ignored

@@ -185,7 +185,6 @@ struct ligand : public flexible_body, atom_range {
 	}
 };
 
-
 struct ligand_gpu {
 	unsigned degrees_of_freedom;
 	interacting_pairs pairs;
@@ -437,6 +436,9 @@ private:
                                   const interacting_pairs& pairs,
                                   const gvecv& coords, gvecv& forces) const;
 
+	fl eval_interacting_pairs_deriv_gpu(force_energy_tup* out, const precalculate& p,
+							const igrid& ig, float v);
+	
 	vecv internal_coords;
     /* TODO:reprivate */
 	/* vecv coords; */

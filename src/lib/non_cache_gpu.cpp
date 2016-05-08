@@ -91,7 +91,7 @@ fl non_cache_gpu::eval(const model& m, fl v) const
 
 //evaluate the model on the gpu, v is the curl amount
 //sets m.minus_forces and returns total energy
-fl non_cache_gpu::eval_deriv(model& m, fl v, const grid& user_grid) const
+force_energy_tup* non_cache_gpu::eval_deriv(model& m, fl v, const grid& user_grid) const
 {
   static loop_timer t;
   t.resume();
@@ -113,5 +113,16 @@ fl non_cache_gpu::eval_deriv(model& m, fl v, const grid& user_grid) const
                                info.nlig_atoms, info.nrec_atoms, v);
 
   t.stop();
-  return e;
+  return out;
+}
+
+float eval_intra_deriv(const ligand_gpu* lgpu, atom_params* ligs, 
+					gvecv out, const float cutoff_sqr,
+					GPUNonCacheInfo *info, float v)
+{
+	eval_intra_kernel<<<1,lgpu->num_pairs>>>(*lgpu, ligs, out, cutoff_sqr, *info, v);
+	cudaThreadSynchronize();
+	abort_on_gpu_err();
+
+	return out[0].energy;	
 }
