@@ -46,7 +46,6 @@ void quasi_newton::operator()(model& m, const precalculate& p,
                               const igrid& ig, output_type& out,
                               change& g, const vec& v, const grid& user_grid) const
 { // g must have correct size
-    m.coords[0].pad[0] = 0x666;
 	quasi_newton_aux aux(&m, &p, &ig, v, &user_grid);
 	fl res = bfgs(aux, out.c, g, average_required_improvement, params);
 	out.e = res;
