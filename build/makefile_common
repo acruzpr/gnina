@@ -7,12 +7,12 @@ FROMGNINAOBJ = fromgnina.o CommandLine.o
 GNINAGRIDOBJ = gninagrid.o nngridder.o
 SERVEROBJ = server.o CommandLine.o MinimizationQuery.o QueryManager.o
 CFLAGS += -Wno-deprecated-declarations
-NVOPTS += --expt-relaxed-constexpr -std=c++11 -gencode arch=compute_52,code=sm_52 
+NVOPTS += -std=c++11 -gencode arch=compute_52,code=sm_52 --compiler-options="-std=c++11 $(C_PLATFORM) $(C_OPTIONS) $(CFLAGS)"
 INCFLAGS = -I $(BOOST_INCLUDE) -I $(OPENBABEL_INCLUDE) -I $(CUDA_INCLUDE) 
 NVCC=$(BASE)/cuda/bin/nvcc
 
 # TODO: sucks
-CC = $(NVCC) $(NVOPTS) --compiler-options="-std=c++11 $(C_PLATFORM) $(C_OPTIONS) $(CFLAGS)" $(INCFLAGS) -x cu 
+CC = $(NVCC) $(NVOPTS) $(INCFLAGS) -x cu 
 
 LDFLAGS := -L$(BASE)/lib -L. -L/usr/local/lib -L$(BASE)/cuda/lib64 $(LDFLAGS)
 
