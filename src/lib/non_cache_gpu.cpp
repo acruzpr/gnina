@@ -1,6 +1,7 @@
 #include "non_cache_gpu.h"
 #include "loop_timer.h"
 #include "gpu_math.h"
+#include "gpu_util.h"
 
 force_energy_tup::force_energy_tup(void){};
 
@@ -126,3 +127,24 @@ float eval_intra_deriv(const ligand_gpu* lgpu, atom_params* ligs,
 
 	return out[0].energy;	
 }
+
+__global__
+void eval_intra_kernel(atom_params* ligs, force_energy_tup* forces,
+                       const interacting_pair *pairs, const float cutoff_sqr,
+                       GPUNonCacheInfo info, float v);
+
+/* TODO: move to precalculate */
+fl non_cache_gpu::eval_intra_deriv(const ligand_gpu& lgpu, fl v, atom_params* ligs,
+                                   gvecv &forces, const float cutoff_sqr)
+{
+    eval_intra_kernel<<<1,lgpu.pairs.size()>>>(ligs,
+                                               (force_energy_tup *) &forces[0],
+                                               &lgpu.pairs[0],
+                                               cutoff_sqr, info, v);
+    cudaThreadSynchronize();
+    abort_on_gpu_err();
+    /* TODO: fetch energy differently */
+    return ((force_energy_tup *) &forces[0])->energy;
+}    
+    
+    

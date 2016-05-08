@@ -40,8 +40,8 @@ public:
 	//sets m.minus_forces and returns total energy
 	virtual fl eval_deriv(model& m, fl v, const grid& user_grid) const;
 
-	float eval_intra_deriv(const ligand_gpu* lgpu, atom_params* ligs, force_energy_tup* out,
-		const float cutoff_sqr, GPUNonCacheInfo *info, float v);
+    fl eval_intra_deriv(const ligand_gpu& lgpu, fl v, atom_params* ligs,
+                        gvecv &forces, const float cutoff_sqr);
 };
 
 #endif

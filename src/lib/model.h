@@ -55,7 +55,7 @@ struct interacting_pair {
 	}
 };
 
-typedef std::vector<interacting_pair> interacting_pairs;
+typedef gvector<interacting_pair> interacting_pairs;
 
 typedef std::pair<std::string, boost::optional<sz> > parsed_line;
 typedef std::vector<parsed_line> pdbqtcontext;
@@ -214,7 +214,7 @@ struct conf_independent_inputs; // forward declaration
 struct pdbqt_initializer; // forward declaration - only declared in parse_pdbqt.cpp
 struct model_test;
 
-struct model {
+struct model : gpu_visible {
 	void append(const model& m);
 
 	sz num_movable_atoms() const { return m_num_movable_atoms; }
@@ -372,7 +372,7 @@ struct model {
 	fl clash_penalty() const;
 
 	const atomv& get_fixed_atoms() const { return grid_atoms; }
-	const atomv& get_movable_atoms() const { return atoms; }
+	const gatomv& get_movable_atoms() const { return atoms; }
 
 	model() : m_num_movable_atoms(0) {};
     /* TODO:protect */
@@ -447,7 +447,7 @@ private:
 	gvecv minus_forces; 
 
 	atomv grid_atoms;
-	atomv atoms; // movable, inflex
+	gatomv atoms; // movable, inflex
 
 	vector_mutable<residue> flex;
 	context flex_context;

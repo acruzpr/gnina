@@ -96,5 +96,10 @@ float3 operator*(T b, float3 a) {
 	return float3(a.x * b, a.y * b, a.z * b);
 }
 
+__host__ __device__ static 
+float dot(float3 a, float3 b) {
+    return a.x * b.x + a.y * b.y + a.z * b.z;
+}
+
 
 #endif

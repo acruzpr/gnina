@@ -31,7 +31,8 @@ struct rigid_body_node {
 
 struct tree_gpu {
 	rigid_body_node root;
-	std::vector<segment_node> nodes;
+	gvector<segment_node> nodes;
+    vecp force_torques[32];
 
 	tree_gpu() {}	
 	tree_gpu(const heterotree<rigid_body> &ligand) : root(ligand) {
@@ -56,8 +57,9 @@ struct tree_gpu {
 		}
 	}	
 
-	void do_derivatives(const segment_node& node, flv::iterator& p, std::vector<vecp>& 
-                        force_torques, int index, const gvecv& coords,
+    __device__ __host__    
+	void do_derivatives(const segment_node& node, fl *&p,
+                        vecp *force_torques, int index, const gvecv& coords,
                         const gvecv& forces) {
 
 		vecp tmp = node.s.sum_force_and_torque(coords, forces);
@@ -78,11 +80,13 @@ struct tree_gpu {
 		d = force_torques[index].second * node.s.axis;	
 	}
 
+    __device__ __host__
 	void derivative(const gvecv& coords, const gvecv& forces, ligand_change& c) {
-		std::vector<vecp> force_torques(nodes.size());
+        /* TODO: NODES SIZE. Gotta configure with kern launch */
+        
 		// Don't put the root's values in the force_torque array
 		vecp force_torque = root.rb.sum_force_and_torque(coords, forces);	
-		flv::iterator p = c.torsions.begin();
+		fl *p = &c.torsions[0];
 		for (int i=0; i<=root.child_range[1]; i++) {
 			// Recursively calculate derivatives for the children using
 			// DFS in order to properly update the torsions array
@@ -97,22 +101,37 @@ struct tree_gpu {
 		c.rigid.orientation = force_torque.second;
 	}
 
+    __device__ __host__    
 	void do_confs(segment_node& node, int my_index,
-                  const frame& parent, const atomv& atoms, 
-                  gvecv& coords, flv::const_iterator& c) {
+                  const frame& parent, const gatomv& atoms, 
+                  gvecv& coords, const fl *&c) {
 		node.s.set_conf(parent, atoms, coords, c);
 		for (int i=node.child_range[0]; i<=node.child_range[1]; i++) {
 			do_confs(nodes[i], i, nodes[my_index].s, atoms, coords, c);
 		}
 	}
 
-	void set_conf(const atomv& atoms, gvecv& coords, const ligand_conf& c) {
+    __device__ __host__
+	void set_conf(const gatomv& atoms, gvecv& coords, const ligand_conf& c) {
 		root.rb.set_conf(atoms, coords, c.rigid);
-		flv::const_iterator p = c.torsions.begin();
+		const fl* p = &c.torsions[0];
 		for (int i=0; i<=root.child_range[1]; i++) {
 			do_confs(nodes[i], i, root.rb, atoms, coords, p);
 		}		
 	}
 };
+
+static __global__
+void derivatives_kernel(tree_gpu &t, const gvecv& coords,
+                        const gvecv& forces, ligand_change& c){
+    
+    t.derivative(coords, forces, c);
+}
+
+static __global__
+void set_conf_kernel(tree_gpu &t, const gatomv& atoms,
+                     gvecv& coords, const ligand_conf& c) {
+    t.set_conf(atoms, coords, c);
+}
 
 #endif

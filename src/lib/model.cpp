@@ -211,8 +211,8 @@ public:
 	}
 
 	// ligands, flex, flex_context, atoms; also used for other_pairs
-	template<typename T>
-	void append(std::vector<T>& a, const std::vector<T>& b)
+	template<typename T, typename A>
+	void append(std::vector<T, A>& a, const std::vector<T, A>& b)
 	{ // first arg becomes aaaaaaaabbbbbbbbbbbbbbb
 		sz a_sz = a.size();
 		vector_append(a, b);
@@ -831,21 +831,24 @@ void model::sete(const conf& c)
 	VINA_FOR_IN(i, ligands)
 		c.ligands[i].rigid.apply(internal_coords, coords, ligands[i].begin,
                                  ligands[i].end);
-	flex.set_conf(atoms, coords, c.flex);
+    /* TODO */
+	/* flex.set_conf(atoms, coords, c.flex); */
 }
 
 void model::set(const conf& c)
 {
 	ligands.set_conf(atoms, coords, c.ligands);
-	flex.set_conf(atoms, coords, c.flex);
+    /* TODO */
+	/* flex.set_conf(atoms, coords, c.flex); */
 }
 
 void model::set_gpu(const conf& c)
 {
     assert(c.ligands.size() == 1);
-	lgpu.t.set_conf(atoms, coords, c.ligands[0]);
+	set_conf_kernel<<<1,1>>>(lgpu.t, atoms, coords, c.ligands[0]);
+    /* lgpu.t.set_conf(atoms, coords, c.ligands[0]); */
     /* TODO: flex */
-	flex.set_conf(atoms, coords, c.flex);
+	/* flex.set_conf(atoms, coords, c.flex); */
 }
 
 //dkoes - return the string corresponding to i'th ligand atoms pdb information
@@ -859,6 +862,10 @@ std::string model::ligand_atom_str(sz i, sz lig) const
 	const context& cont = ligands[lig].cont;
 	for(sz c = 0, nc = cont.pdbqtsize(); c < nc; c++)
 	{
+        /* TODO: nvcc flags error here:
+           ../../../src/lib/model.cpp:862: warning: integer conversion
+           resulted in a change of sign
+        */
 		if(cont.pdbqttext[c].second.get_value_or(-1) == i)
 		{
 			pdbline = ligands[lig].cont.pdbqttext[c].first;
@@ -991,12 +998,19 @@ fl model::eval_deriv_gpu(const precalculate& p, const igrid& ig, const vec& v,
                      const conf& c, change& g, const grid& user_grid)
 { // clean up
 	set_gpu(c);
+    cudaDeviceSynchronize();
 	fl e = ig.eval_deriv(*this, v[1], user_grid); // sets minus_forces, except inflex
-	e += eval_interacting_pairs_deriv(p, v[2], other_pairs, coords,
-			minus_forces); // adds to minus_forces
+	/* e += eval_interacting_pairs_deriv(p, v[2], other_pairs, coords, */
+	/* 		minus_forces); // adds to minus_forces */
+	/* VINA_FOR_IN(i, ligands) */
+	/* 	e += eval_interacting_pairs_deriv(p, v[0], ligands[i].pairs, coords, */
+	/* 			minus_forces); // adds to minus_forces */
 	// calculate derivatives
-	lgpu.t.derivative(coords, minus_forces, g.ligands[0]);
-	flex.derivative(coords, minus_forces, g.flex); // inflex forces are ignored
+    /* lgpu.t.derivative(coords, minus_forces, g.ligands[0]); */
+	derivatives_kernel<<<1,1>>>(lgpu.t, coords, minus_forces, g.ligands[0]);
+	/* flex.derivative(coords, minus_forces, g.flex); // inflex forces are ignored */
+
+    cudaDeviceSynchronize();
 	return e;
 }
 
