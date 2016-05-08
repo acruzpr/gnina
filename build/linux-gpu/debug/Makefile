@@ -12,4 +12,4 @@ include ../../makefile_common
 .DEFAULT_GOAL := gpu
 
 gpu: $(MAINOBJ) $(LIBOBJ)
-	$(NVCC) -gencode arch=compute_52,code=sm_52 $(LDFLAGS) -o smina.$@ $^ $(LIBS)  -lcudart
+	$(NVCC) $(NVOPTS) -gencode arch=compute_52,code=sm_52 $(LDFLAGS) -o smina.$@ $^ $(LIBS)  -lcudart
