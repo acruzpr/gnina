@@ -168,6 +168,7 @@ void refine_structure(model& m, const precalculate& prec, non_cache& nc,
 {
 	change g(m.get_size());
 
+	std::cout << "[" << m.get_name() << "] refining pose\n";
 	quasi_newton quasi_newton_par(minparm);
 	const fl slope_orig = nc.getSlope();
 	//try 5 times to get ligand into box
@@ -183,6 +184,7 @@ void refine_structure(model& m, const precalculate& prec, non_cache& nc,
 		{
 			break;
 		}
+		std::cout << "[" << m.get_name() << "] ligand outside box \n";
 		slope *= 10;
 	}
 	out.coords = m.get_heavy_atom_movable_coords();
@@ -1561,6 +1563,9 @@ Thank you!\n";
 					delete m;
 					break;
 				}
+
+				// pose index in ligand file
+				m->set_name(m->get_name() + std::to_string(i));
 
 				if (settings.local_only)
 				{

@@ -965,9 +965,9 @@ void model::add_minus_forces(const std::vector<float3> forces)
 	{
 		if (!atoms[i].is_hydrogen()) // no hydrogen forces
 		{
-			minus_forces[i].data[0] += forces[j].x;
-			minus_forces[i].data[1] += forces[j].y;
-			minus_forces[i].data[2] += forces[j].z;
+			minus_forces[i].data[0] -= forces[j].x;
+			minus_forces[i].data[1] -= forces[j].y;
+			minus_forces[i].data[2] -= forces[j].z;
 			j += 1;
 		}
 	}

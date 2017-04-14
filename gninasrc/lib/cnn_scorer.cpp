@@ -157,11 +157,6 @@ float CNNScorer::score(model& m, bool compute_gradient, float& aff)
 			//has affinity prediction
 			const Dtype* aff = affblob->cpu_data();
 			affinity += aff[0];
-			cout << "#Rotate " << out[1] << " " << aff[0] << "\n";
-		}
-		else
-		{
-			cout << "#Rotate " << out[1] << "\n";
 		}
 		if (compute_gradient)
 		{
@@ -170,7 +165,14 @@ float CNNScorer::score(model& m, bool compute_gradient, float& aff)
 		}
 		cnt++;
 	}
-
+/*
+	cout << "#cnnscore " << score / cnt;
+	if (affblob)
+		cout << " affinity " << affinity / cnt;
+	if (cnt > 1)
+		cout << " (" << cnt << " rotations)";
+	cout << "\n";
+*/
 	aff = affinity / cnt;
 	return score / cnt;
 }
